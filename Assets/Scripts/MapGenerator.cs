@@ -2,12 +2,15 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using System;
+using NUnit.Framework.Internal;
 
 public class MapGenerator : MonoBehaviour
 {
+    [SerializeField] private GameObject islandTile, OceanTile;
     [SerializeField] private int width;
     [SerializeField] private int height;
     private int[,] map;
+    public GameObject[,] generatedMap;
 
     [Range(0, 100)] [SerializeField] public int randomFillPercent;
 
@@ -44,8 +47,26 @@ public class MapGenerator : MonoBehaviour
             }
         }
 
-        MeshGenerator meshGenerator = GetComponent<MeshGenerator>();
-        meshGenerator.GenerateMesh(boarderMap, 1);
+        //MeshGenerator meshGenerator = GetComponent<MeshGenerator>();
+        //meshGenerator.GenerateMesh(boarderMap, 1);
+        generatedMap = new GameObject[width + borderSize * 2, height + borderSize * 2];
+
+        for (int x = 0; x < boarderMap.GetLength(0); x++)
+        {
+            for (int z = 0; z < boarderMap.GetLength(1); z++)
+            {
+                Vector3 pos = new Vector3(x, 0, z);
+
+                if (boarderMap[x, z] == 0)
+                    generatedMap[x,z] = Instantiate(islandTile, pos, Quaternion.identity);
+                else
+                    generatedMap[x, z] =  Instantiate(OceanTile, pos, Quaternion.identity);
+
+                generatedMap[x, z].transform.SetParent(this.gameObject.transform);
+            }
+        }
+
+
     }
 
     private void RandomFillMap()

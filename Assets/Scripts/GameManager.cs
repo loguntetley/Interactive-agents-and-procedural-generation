@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class GameManager : MonoBehaviour
 {
-    [SerializeField] private List<GameObject> instianteAtStart = new List<GameObject>();
+    /*[SerializeField] private List<GameObject> instianteAtStart = new List<GameObject>();
 
     private void Start()
     {
@@ -12,5 +12,5 @@ public class GameManager : MonoBehaviour
         {
             Instantiate(gameObject);
         }
-    }
+    }*/
 }

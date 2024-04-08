@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 2885274229754275045}
   - component: {fileID: 5573022996661755952}
   - component: {fileID: 1513358177847294455}
+  - component: {fileID: 3886581160717145589}
   m_Layer: 0
   m_Name: Survivor
   m_TagString: Untagged
@@ -108,3 +109,16 @@ MeshCollider:
   m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: 10209, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!114 &3886581160717145589
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7443392636896393557}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 54047e55e6df940478f97fa22a23b3cc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  yLock: 0.01

@@ -2,6 +2,7 @@ using NPBehave;
 using System;
 using System.Xml.Linq;
 using TMPro;
+using Unity.VisualScripting;
 using UnityEditor.Experimental.GraphView;
 using UnityEngine;
 using static UnityEngine.GraphicsBuffer;
@@ -12,10 +13,16 @@ public class GenericAgent : MonoBehaviour
     private NPBehave.Blackboard sharedBlackboard;
     private NPBehave.Blackboard ownBlackboard;
     private Root behaviorTree;
-    private Vector3 explorePosition = new Vector3(999f, 999f, 999f);
+    private Vector3 explorePosition;
+    private GameObject[,] map;
+    private float exploreRange = 30f;
+    private float speed = 5f;
+    private float engagmentRange = 7.5f;
+    [SerializeField] private Material testMaterial;
 
     private void Start()
     {
+        explorePosition = new Vector3(9999f, 9999f, 9999f);
         sharedBlackboard = UnityContext.GetSharedBlackboard("zombie-ai");
         ownBlackboard = new NPBehave.Blackboard(sharedBlackboard, UnityContext.GetClock());
         behaviorTree = CreateBehaviourTree();
@@ -32,7 +39,7 @@ public class GenericAgent : MonoBehaviour
 
                     new BlackboardCondition("engaged", Operator.IS_EQUAL, true, Stops.IMMEDIATE_RESTART,
 
-                        new Sequence(
+                        new NPBehave.Sequence(
 
                             new NPBehave.Action(() => SetColor(Color.red)),
 
@@ -52,14 +59,15 @@ public class GenericAgent : MonoBehaviour
                     ),
                     new BlackboardCondition("exploring", Operator.IS_EQUAL, true, Stops.IMMEDIATE_RESTART,
 
-                        new Sequence(
-                            new NPBehave.Action(() => SetColor(Color.gray)),
+                        new NPBehave.Sequence(
+                            new NPBehave.Action(() => SetColor(Color.magenta)),
 
                             new NPBehave.Action((bool _shouldCancel) =>
                             {
                                 if (!_shouldCancel)
                                 {
                                     Explore();
+                                    Debug.Log("Exploring");
                                     return NPBehave.Action.Result.PROGRESS;
                                 }
                                 else
@@ -79,9 +87,9 @@ public class GenericAgent : MonoBehaviour
     {
         Vector3 survivorPosition = GameObject.FindGameObjectWithTag("Survivor").transform.position;
 
-        Debug.Log(survivorPosition);
+        //Debug.Log("survivorPosition: " + survivorPosition);
         ownBlackboard["survivorPosition"] = survivorPosition;
-        ownBlackboard["survivorInRange"] = Vector3.Distance(survivorPosition, this.transform.position) < 7.5f;
+        ownBlackboard["survivorInRange"] = Vector3.Distance(survivorPosition, this.transform.position) < engagmentRange;
 
         if (ownBlackboard.Get<bool>("survivorInRange") && !ownBlackboard.Get<bool>("engaged"))
         {
@@ -116,25 +124,33 @@ public class GenericAgent : MonoBehaviour
 
     private void Explore()
     {
-
-        if (explorePosition.y != 0)
+        if (explorePosition.y == 9999f)
         {
-            float x = Random.Range(-30, 30);
-            float z = Random.Range(-30, 30);
-            explorePosition = new Vector3(x, 0, z);
+            map = GameObject.FindGameObjectWithTag("MapGenerator").GetComponent<MapGenerator>().generatedMap;
+            explorePosition = FindExplorablePosition();
         }
 
-        transform.position = Vector3.MoveTowards(transform.position, new Vector3(explorePosition.x, explorePosition.y, explorePosition.z), 5f * Time.deltaTime);
+        transform.position = Vector3.MoveTowards(transform.position, explorePosition, speed * Time.deltaTime);
+        map[(int)explorePosition.x, (int)explorePosition.z].GetComponent<MeshRenderer>().material = testMaterial;
 
-        if ((Vector3)transform.position == explorePosition)
-        {
-            float x = Random.Range(-30, 30);
-            float z = Random.Range(-30, 30);
-            explorePosition = new Vector3(x, 0, z);
-        }
+        if (transform.position.x == explorePosition.x && transform.position.z == explorePosition.z)
+            explorePosition = FindExplorablePosition();    
+    }
+
+    private Vector3 FindExplorablePosition()
+    {
+        float x = Mathf.Clamp(Random.Range(gameObject.transform.position.x - exploreRange, gameObject.transform.position.x + exploreRange), 0, map.GetLength(0) - 1);
+        float z = Mathf.Clamp(Random.Range(gameObject.transform.position.x - exploreRange, gameObject.transform.position.x + exploreRange), 0, map.GetLength(1) - 1);
+
+        if (map[(int)x, (int)z].tag == "Island")
+            return new Vector3(x, 0, z);
+
+        return FindExplorablePosition();
     }
 
     
+
+
 
 
 }
