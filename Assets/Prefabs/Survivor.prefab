@@ -136,4 +136,5 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   region: 0
-  testMaterial: {fileID: 0}
+  bitten: 0
+  ZombieAgent: {fileID: 8911976248200542405, guid: 8dfe6207aa6ed924e8597d6a74adcb98, type: 3}

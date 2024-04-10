@@ -20,7 +20,9 @@ public class SurvivorAgent : MonoBehaviour
     private float speed = 8f;
     private float engagmentRange = 5f;
     public int region = 0;
-    //[SerializeField] private Material testMaterial;
+    public bool bitten = false;
+    public bool runOnce = true;
+    [SerializeField] private GameObject ZombieAgent;
 
     private void Start()
     {
@@ -77,12 +79,21 @@ public class SurvivorAgent : MonoBehaviour
                                     //Debug.Log("Stopped Exploring");
                                     return NPBehave.Action.Result.FAILED;
                                 }
-                            })
+                            })                           
+                        )
+                    ),
+                    new BlackboardCondition("bitten", Operator.IS_EQUAL, true, Stops.IMMEDIATE_RESTART,
+
+                        new NPBehave.Sequence(
+                            new NPBehave.Action(() => SetColor(Color.black)),
+
+                            new NPBehave.Action(() => Infected()
+                            
                             )
                         )
                     )
                 )
-            
+            )
         );
     }
 
@@ -123,13 +134,30 @@ public class SurvivorAgent : MonoBehaviour
             ownBlackboard["flee"] = false;
             ownBlackboard["exploring"] = true;
         }
+
+        if (bitten)
+        {
+            ownBlackboard["bitten"] = true;
+            ownBlackboard["flee"] = false;
+            ownBlackboard["exploring"] = false;
+        }
     }
 
     private void SetColor(Color color)
     {
         GetComponent<MeshRenderer>().material.SetColor("_Color", color);
     }
+    private void Infected()
+    {
+        if (runOnce)
+        {
+            GameObject newZombie = Instantiate(ZombieAgent, transform.position, Quaternion.identity);
+            newZombie.GetComponent<ZombieAgent>().region = region;
+            this.gameObject.SetActive(false);
+            runOnce = false;
+        }
 
+    }
     private void MoveTowardsTarget(Vector3 target)
     {
         float step = 5f * Time.deltaTime;
@@ -163,7 +191,7 @@ public class SurvivorAgent : MonoBehaviour
     {
         Vector3 directionFromAToB = (objectPosition - transform.position).normalized;
         Vector3 oppositeDirection = -directionFromAToB;
-        Vector3 redirectedPosition = new Vector3(100, 0.0f, 100);//(transform.position.x * oppositeDirection.x, 0.01f, transform.position.z * oppositeDirection.z);
+        Vector3 redirectedPosition = new Vector3(transform.position.x + oppositeDirection.x, 0.01f, transform.position.z + oppositeDirection.z);
         Vector3 newPosition = Vector3.MoveTowards(transform.position, redirectedPosition, speed * Time.deltaTime);
         transform.position = newPosition;      
     }

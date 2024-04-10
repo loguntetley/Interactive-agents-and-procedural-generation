@@ -199,7 +199,7 @@ public class MapGenerator : MonoBehaviour
         }
     }
 
-    private bool MapInCheckInBounds(int x, int z)
+    public bool MapInCheckInBounds(int x, int z)
     {
         return (x <= generatedMap.GetLength(0) && x >= 0 && z <= generatedMap.GetLength(1) && z >= 0);    
     }

@@ -18,6 +18,7 @@ public class ZombieAgent : MonoBehaviour
     private MapGenerator mapGenerator;
     private float speed = 5f;
     private float engagmentRange = 7.5f;
+    private float biteRange = 3.5f;
     public int region = 0;
     [SerializeField] private Material testMaterial;
 
@@ -49,6 +50,7 @@ public class ZombieAgent : MonoBehaviour
                                 if (!_shouldCancel)
                                 {
                                     MoveTowardsTarget(ownBlackboard.Get<Vector3>("survivorPosition"));
+                                    AttemptBite(ownBlackboard.Get<GameObject>("survivor"));
                                     return NPBehave.Action.Result.PROGRESS;
                                 }
                                 else
@@ -84,6 +86,15 @@ public class ZombieAgent : MonoBehaviour
         );
     }
 
+    private void AttemptBite(GameObject target)
+    {
+        if (Vector3.Distance(target.transform.position, this.transform.position) < biteRange)
+        {
+            Debug.Log("Bite");
+            target.GetComponent<SurvivorAgent>().bitten = true;
+        }
+    }
+
     private void UpdateBlackboards()
     {
         GameObject[] survivorPositions = GameObject.FindGameObjectsWithTag("Survivor");
@@ -101,6 +112,7 @@ public class ZombieAgent : MonoBehaviour
             }
         }
 
+        ownBlackboard["survivor"] = survivorPositions[closestSurvivorIndex];
         ownBlackboard["survivorPosition"] = survivorPositions[closestSurvivorIndex].transform.position;
         ownBlackboard["survivorInRange"] = Vector3.Distance(survivorPositions[closestSurvivorIndex].transform.position, this.transform.position) < engagmentRange;
 
@@ -132,7 +144,22 @@ public class ZombieAgent : MonoBehaviour
     {
         float step = 5f * Time.deltaTime;
         Vector3 newPosition = Vector3.MoveTowards(transform.position, new Vector3(target.x, target.y, target.z), step);
-        transform.position = newPosition;
+        if (map == null)
+        {
+            Debug.Log("Map Set");
+            mapGenerator = GameObject.FindGameObjectWithTag("MapGenerator").GetComponent<MapGenerator>();
+            map = mapGenerator.generatedMap;
+        }
+        if (map[(int)newPosition.x, (int)newPosition.z].tag == "Island")
+        {
+            transform.position = newPosition;
+        }
+        else
+        {
+            ownBlackboard["engaged"] = false;
+            ownBlackboard["exploring"] = true;
+        }
+        
     }
 
     private void Explore()
@@ -154,7 +181,15 @@ public class ZombieAgent : MonoBehaviour
     private Vector3 FindExplorablePosition()
     {
         int randomTile = Random.Range(0, mapGenerator.regions[region].Count);
-        return new Vector3(mapGenerator.regions[region][randomTile].x, 0.01f, mapGenerator.regions[region][randomTile].z);
+        Vector3 newPosition = new Vector3(mapGenerator.regions[region][randomTile].x, 0.01f, mapGenerator.regions[region][randomTile].z);
+        if (map[(int)newPosition.x, (int)newPosition.z].tag == "Island")
+        {
+            return newPosition;
+        }
+        else 
+        {
+            return FindExplorablePosition();
+        }
     }
 
     
