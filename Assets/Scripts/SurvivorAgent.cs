@@ -5,25 +5,27 @@ using TMPro;
 using Unity.VisualScripting;
 using UnityEditor.Experimental.GraphView;
 using UnityEngine;
+using UnityEngine.UIElements;
 using static UnityEngine.GraphicsBuffer;
 using Random = UnityEngine.Random;
 
-public class GenericAgent : MonoBehaviour
+public class SurvivorAgent : MonoBehaviour
 {
     private NPBehave.Blackboard sharedBlackboard;
     private NPBehave.Blackboard ownBlackboard;
     private Root behaviorTree;
     private Vector3 explorePosition;
     private GameObject[,] map;
-    private float exploreRange = 30f;
-    private float speed = 5f;
-    private float engagmentRange = 7.5f;
-    [SerializeField] private Material testMaterial;
+    private MapGenerator mapGenerator;
+    private float speed = 8f;
+    private float engagmentRange = 5f;
+    public int region = 0;
+    //[SerializeField] private Material testMaterial;
 
     private void Start()
     {
         explorePosition = new Vector3(9999f, 9999f, 9999f);
-        sharedBlackboard = UnityContext.GetSharedBlackboard("zombie-ai");
+        sharedBlackboard = UnityContext.GetSharedBlackboard("survivor-ai");
         ownBlackboard = new NPBehave.Blackboard(sharedBlackboard, UnityContext.GetClock());
         behaviorTree = CreateBehaviourTree();
         behaviorTree.Start();
@@ -37,17 +39,17 @@ public class GenericAgent : MonoBehaviour
 
                 new Selector(
 
-                    new BlackboardCondition("engaged", Operator.IS_EQUAL, true, Stops.IMMEDIATE_RESTART,
+                    new BlackboardCondition("flee", Operator.IS_EQUAL, true, Stops.IMMEDIATE_RESTART,
 
                         new NPBehave.Sequence(
 
-                            new NPBehave.Action(() => SetColor(Color.red)),
+                            new NPBehave.Action(() => SetColor(Color.blue)),
 
                             new NPBehave.Action((bool _shouldCancel) =>
                             {
                                 if (!_shouldCancel)
                                 {
-                                    MoveTowardsTarget(ownBlackboard.Get<Vector3>("survivorPosition"));
+                                    FleeTarget(ownBlackboard.Get<Vector3>("zombiePosition"));
                                     return NPBehave.Action.Result.PROGRESS;
                                 }
                                 else
@@ -60,18 +62,19 @@ public class GenericAgent : MonoBehaviour
                     new BlackboardCondition("exploring", Operator.IS_EQUAL, true, Stops.IMMEDIATE_RESTART,
 
                         new NPBehave.Sequence(
-                            new NPBehave.Action(() => SetColor(Color.magenta)),
+                            new NPBehave.Action(() => SetColor(Color.green)),
 
                             new NPBehave.Action((bool _shouldCancel) =>
                             {
                                 if (!_shouldCancel)
                                 {
                                     Explore();
-                                    Debug.Log("Exploring");
+                                    //Debug.Log("Exploring");
                                     return NPBehave.Action.Result.PROGRESS;
                                 }
                                 else
                                 {
+                                    //Debug.Log("Stopped Exploring");
                                     return NPBehave.Action.Result.FAILED;
                                 }
                             })
@@ -85,27 +88,39 @@ public class GenericAgent : MonoBehaviour
 
     private void UpdateBlackboards()
     {
-        Vector3 survivorPosition = GameObject.FindGameObjectWithTag("Survivor").transform.position;
+        GameObject[] zombiePositions = GameObject.FindGameObjectsWithTag("Zombie");
 
-        //Debug.Log("survivorPosition: " + survivorPosition);
-        ownBlackboard["survivorPosition"] = survivorPosition;
-        ownBlackboard["survivorInRange"] = Vector3.Distance(survivorPosition, this.transform.position) < engagmentRange;
-
-        if (ownBlackboard.Get<bool>("survivorInRange") && !ownBlackboard.Get<bool>("engaged"))
+        float closestDistance = 9999f;
+        int closestZombieIndex = 0;
+        for (int i = 0; i < zombiePositions.Length; i++)
         {
-            ownBlackboard["engaged"] = true;
+            float distance = (this.transform.position - zombiePositions[i].transform.position).magnitude;
+
+            if (distance < closestDistance)
+            {
+                closestDistance = distance;
+                closestZombieIndex = i;
+            }
+        }
+
+        ownBlackboard["zombiePosition"] = zombiePositions[closestZombieIndex].transform.position;
+        ownBlackboard["zombieInRange"] = Vector3.Distance(zombiePositions[closestZombieIndex].transform.position, this.transform.position) < engagmentRange;
+
+        if (ownBlackboard.Get<bool>("zombieInRange") && !ownBlackboard.Get<bool>("flee"))
+        {
+            ownBlackboard["flee"] = true;
             ownBlackboard["exploring"] = false;
         }
 
-        if (!ownBlackboard.Get<bool>("survivorInRange") && ownBlackboard.Get<bool>("engaged"))
+        if (!ownBlackboard.Get<bool>("zombieInRange") && ownBlackboard.Get<bool>("flee"))
         {
-            ownBlackboard["engaged"] = false;
+            ownBlackboard["flee"] = false;
             ownBlackboard["exploring"] = true;
         }
 
-        if (!ownBlackboard.Get<bool>("survivorInRange") && !ownBlackboard.Get<bool>("engaged"))
+        if (!ownBlackboard.Get<bool>("zombieInRange") && !ownBlackboard.Get<bool>("flee"))
         {
-            ownBlackboard["engaged"] = false;
+            ownBlackboard["flee"] = false;
             ownBlackboard["exploring"] = true;
         }
     }
@@ -126,12 +141,13 @@ public class GenericAgent : MonoBehaviour
     {
         if (explorePosition.y == 9999f)
         {
-            map = GameObject.FindGameObjectWithTag("MapGenerator").GetComponent<MapGenerator>().generatedMap;
+            mapGenerator = GameObject.FindGameObjectWithTag("MapGenerator").GetComponent<MapGenerator>();
+            map = mapGenerator.generatedMap;
             explorePosition = FindExplorablePosition();
         }
 
         transform.position = Vector3.MoveTowards(transform.position, explorePosition, speed * Time.deltaTime);
-        map[(int)explorePosition.x, (int)explorePosition.z].GetComponent<MeshRenderer>().material = testMaterial;
+        //map[(int)explorePosition.x, (int)explorePosition.z].GetComponent<MeshRenderer>().material = testMaterial;
 
         if (transform.position.x == explorePosition.x && transform.position.z == explorePosition.z)
             explorePosition = FindExplorablePosition();    
@@ -139,16 +155,18 @@ public class GenericAgent : MonoBehaviour
 
     private Vector3 FindExplorablePosition()
     {
-        float x = Mathf.Clamp(Random.Range(gameObject.transform.position.x - exploreRange, gameObject.transform.position.x + exploreRange), 0, map.GetLength(0) - 1);
-        float z = Mathf.Clamp(Random.Range(gameObject.transform.position.x - exploreRange, gameObject.transform.position.x + exploreRange), 0, map.GetLength(1) - 1);
-
-        if (map[(int)x, (int)z].tag == "Island")
-            return new Vector3(x, 0, z);
-
-        return FindExplorablePosition();
+        int randomTile = Random.Range(0, mapGenerator.regions[region].Count);
+        return new Vector3(mapGenerator.regions[region][randomTile].x, 0.01f, mapGenerator.regions[region][randomTile].z);
     }
 
-    
+    private void FleeTarget(Vector3 objectPosition)
+    {
+        Vector3 directionFromAToB = (objectPosition - transform.position).normalized;
+        Vector3 oppositeDirection = -directionFromAToB;
+        Vector3 redirectedPosition = new Vector3(100, 0.0f, 100);//(transform.position.x * oppositeDirection.x, 0.01f, transform.position.z * oppositeDirection.z);
+        Vector3 newPosition = Vector3.MoveTowards(transform.position, redirectedPosition, speed * Time.deltaTime);
+        transform.position = newPosition;      
+    }
 
 
 
