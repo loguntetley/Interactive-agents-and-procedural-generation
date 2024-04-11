@@ -418,7 +418,7 @@ PrefabInstance:
       objectReference: {fileID: 6809797999474843762, guid: 6409ed36679aa304eab5771fc36cfcde, type: 3}
     - target: {fileID: 5760115875689640518, guid: c8162928f7f3e7a49abe20394e91d8b4, type: 3}
       propertyPath: useRandomSeed
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

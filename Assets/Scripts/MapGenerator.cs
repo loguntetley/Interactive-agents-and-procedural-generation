@@ -207,7 +207,7 @@ public class MapGenerator : MonoBehaviour
     private void RandomFillMap()
     {
         if (useRandomSeed)
-            seed = Time.time.ToString();
+            seed = System.DateTime.Now.Ticks.ToString();
 
         System.Random randSeed = new System.Random(seed.GetHashCode());
 

@@ -21,6 +21,7 @@ public class ZombieAgent : MonoBehaviour
     private float biteRange = 3.5f;
     public int region = 0;
     [SerializeField] private Material testMaterial;
+    [SerializeField] private GameObject testCube;
 
     private void Start()
     {
@@ -29,6 +30,7 @@ public class ZombieAgent : MonoBehaviour
         ownBlackboard = new NPBehave.Blackboard(sharedBlackboard, UnityContext.GetClock());
         behaviorTree = CreateBehaviourTree();
         behaviorTree.Start();
+        
     }
 
     private Root CreateBehaviourTree()
@@ -90,7 +92,7 @@ public class ZombieAgent : MonoBehaviour
     {
         if (Vector3.Distance(target.transform.position, this.transform.position) < biteRange)
         {
-            Debug.Log("Bite");
+            //Debug.Log("Bite");
             target.GetComponent<SurvivorAgent>().bitten = true;
         }
     }
@@ -146,7 +148,7 @@ public class ZombieAgent : MonoBehaviour
         Vector3 newPosition = Vector3.MoveTowards(transform.position, new Vector3(target.x, target.y, target.z), step);
         if (map == null)
         {
-            Debug.Log("Map Set");
+            //Debug.Log("Map Set");
             mapGenerator = GameObject.FindGameObjectWithTag("MapGenerator").GetComponent<MapGenerator>();
             map = mapGenerator.generatedMap;
         }
@@ -182,20 +184,40 @@ public class ZombieAgent : MonoBehaviour
     {
         int randomTile = Random.Range(0, mapGenerator.regions[region].Count);
         Vector3 newPosition = new Vector3(mapGenerator.regions[region][randomTile].x, 0.01f, mapGenerator.regions[region][randomTile].z);
-        if (map[(int)newPosition.x, (int)newPosition.z].tag == "Island")
+
+        int i = 1;
+        Vector3 offset = transform.position;
+        while (PointNotReached(offset, newPosition))
         {
-            return newPosition;
+            i++;
+            Vector3 direction = Vector3.Normalize(newPosition - transform.position);
+            offset = transform.position + direction * 1f * i;       
+
+            try
+            {
+                if (map[(int)offset.x, (int)offset.z].tag == "Ocean")
+                {
+                    return FindExplorablePosition();
+                }
+            }
+            catch
+            {
+                return newPosition;
+            }
         }
-        else 
-        {
-            return FindExplorablePosition();
-        }
+
+        return newPosition;
+
     }
 
-    
+    private bool PointNotReached(Vector3 currentPositionToSearch, Vector3 endPosition)
+    {
+        if (Vector3.Distance(currentPositionToSearch, endPosition) < 1.5f)
+        {
+            return false;
+        }
 
-
-
-
+        return true;
+    }
 }
 
